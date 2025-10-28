@@ -22,10 +22,15 @@ def get_config():
         if not _SECRET_KEY:
             print("WARNING: SECRET_KEY não está configurada! Usando chave padrão (INSEGURO)")
             _SECRET_KEY = "chave-padrao-insegura-nao-usar-em-producao"
+        else:
+            # Remover aspas duplas se existirem
+            _SECRET_KEY = _SECRET_KEY.strip().strip('"').strip("'")
         print(f"DEBUG AUTH - SECRET_KEY configurada: {_SECRET_KEY[:8]}...{_SECRET_KEY[-4:]}")
     
     if _ALGORITHM is None:
         _ALGORITHM = os.getenv("ALGORITHM", "HS256")
+        # Remover aspas duplas se existirem
+        _ALGORITHM = _ALGORITHM.strip().strip('"').strip("'")
     
     if _ACCESS_TOKEN_EXPIRE_MINUTES is None:
         _ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
