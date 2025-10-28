@@ -70,7 +70,7 @@ def test_login_flow():
     try:
         # Mostrar configurações atuais
         import auth as auth_module
-        current_secret = auth_module.SECRET_KEY
+        secret_key, algorithm, expire_min = auth_module.get_config()
         
         # Criar token de teste
         test_data = {"sub": "usuario_teste"}
@@ -78,7 +78,7 @@ def test_login_flow():
         
         # Tentar decodificar o token usando a MESMA instância
         from jose import jwt
-        payload = jwt.decode(token, current_secret, algorithms=[auth.ALGORITHM])
+        payload = jwt.decode(token, secret_key, algorithms=[algorithm])
         
         return {
             "success": True,
@@ -86,18 +86,35 @@ def test_login_flow():
             "token_decoded": True,
             "payload": payload,
             "user_from_token": payload.get("sub"),
-            "secret_key_first8": current_secret[:8] if current_secret else "None",
-            "secret_key_last4": current_secret[-4:] if current_secret else "None"
+            "secret_key_repr": repr(secret_key[:10]) if secret_key else "None",
+            "secret_length": len(secret_key) if secret_key else 0,
+            "algorithm": algorithm
         }
     except Exception as e:
         import auth as auth_module
+        secret_key, algorithm, _ = auth_module.get_config()
         return {
             "success": False,
             "error": str(e),
             "error_type": type(e).__name__,
-            "secret_key_first8": auth_module.SECRET_KEY[:8] if auth_module.SECRET_KEY else "None",
-            "secret_key_last4": auth_module.SECRET_KEY[-4:] if auth_module.SECRET_KEY else "None"
+            "secret_key_repr": repr(secret_key[:10]) if secret_key else "None",
+            "secret_length": len(secret_key) if secret_key else 0,
+            "algorithm": algorithm
         }
+
+@app.get("/debug/env-check")
+def check_environment():
+    """Verificar as variáveis de ambiente detalhadamente"""
+    import os
+    secret_raw = os.getenv("SECRET_KEY")
+    return {
+        "secret_key_raw": repr(secret_raw[:10]) if secret_raw else "None",
+        "secret_key_len": len(secret_raw) if secret_raw else 0,
+        "secret_key_type": type(secret_raw).__name__ if secret_raw else "None",
+        "algorithm_raw": repr(os.getenv("ALGORITHM", "")),
+        "has_quotes": '"' in secret_raw if secret_raw else False,
+        "has_newlines": '\n' in secret_raw if secret_raw else False
+    }
 
 @app.get("/debug/users-count")
 def debug_users_count(db: Session = Depends(database.get_db)):
