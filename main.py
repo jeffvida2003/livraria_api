@@ -90,6 +90,26 @@ def test_login_flow():
             "error_type": type(e).__name__
         }
 
+@app.get("/debug/users-count")
+def debug_users_count(db: Session = Depends(database.get_db)):
+    """Endpoint para verificar quantos usuários existem no banco"""
+    try:
+        total_users = db.query(models.Usuario).count()
+        usuarios = db.query(models.Usuario).limit(5).all()
+        usernames = [u.nome for u in usuarios]
+        
+        return {
+            "success": True,
+            "total_users": total_users,
+            "sample_usernames": usernames[:5]  # Primeiros 5 usuários
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
+
 @app.post("/usuarios", response_model=schemas.UsuarioOut, status_code=201)
 def criar_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(database.get_db)):
     hashed = auth.criar_hash_senha(usuario.senha)
