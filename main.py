@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 import models, schemas, database, auth
 from routers import livros, autores, categorias, editoras
+import os
 
 app = FastAPI(
     title="API Livraria Digital",
@@ -14,6 +15,15 @@ app.include_router(livros.router)
 app.include_router(autores.router)
 app.include_router(categorias.router)
 app.include_router(editoras.router)
+
+# Endpoint temporário para debug - REMOVER EM PRODUÇÃO
+@app.get("/debug/config")
+def debug_config():
+    return {
+        "secret_key_length": len(os.getenv("SECRET_KEY", "")),
+        "algorithm": os.getenv("ALGORITHM", ""),
+        "database_url_prefix": os.getenv("DATABASE_URL", "")[:20] + "..." if os.getenv("DATABASE_URL") else "Not set"
+    }
 
 @app.post("/usuarios", response_model=schemas.UsuarioOut, status_code=201)
 def criar_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(database.get_db)):

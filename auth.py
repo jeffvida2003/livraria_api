@@ -9,7 +9,10 @@ from sqlalchemy.orm import Session
 from models import Usuario
 from database import get_db
 
-SECRET_KEY = os.getenv("SECRET_KEY", "segredoemergencia")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY não está configurada nas variáveis de ambiente")
+    
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
 
@@ -41,13 +44,22 @@ def obter_usuario_logado(token: str = Depends(oauth2_scheme), db: Session = Depe
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
+        # Debug: log das configurações (remover em produção)
+        print(f"DEBUG - SECRET_KEY existe: {bool(SECRET_KEY)}")
+        print(f"DEBUG - SECRET_KEY length: {len(SECRET_KEY) if SECRET_KEY else 0}")
+        print(f"DEBUG - ALGORITHM: {ALGORITHM}")
+        
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         nome_usuario: str = payload.get("sub")
         if nome_usuario is None:
+            print("DEBUG - Nome de usuário não encontrado no token")
             raise cred_exc
-    except JWTError:
+        print(f"DEBUG - Usuário do token: {nome_usuario}")
+    except JWTError as e:
+        print(f"DEBUG - Erro JWT: {str(e)}")
         raise cred_exc
     usuario = db.query(Usuario).filter(Usuario.nome == nome_usuario).first()
     if usuario is None:
+        print(f"DEBUG - Usuário {nome_usuario} não encontrado no banco")
         raise cred_exc
     return usuario

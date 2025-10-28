@@ -15,3 +15,6 @@ docker network prune -f
  
 # (opcional) Limpa cache e camadas não usadas
 docker system prune -a --volumes -f
+
+External Database URL
+postgresql://livraria_api_db_user:Qd1VKKFAwbvqmycBuZCLfIZdaqwmlOWG@dpg-d3vvv9euk2gs73db637g-a.oregon-postgres.render.com/livraria_api_db
