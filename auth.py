@@ -9,13 +9,31 @@ from sqlalchemy.orm import Session
 from models import Usuario
 from database import get_db
 
-SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY:
-    print("WARNING: SECRET_KEY não está configurada! Usando chave padrão (INSEGURO)")
-    SECRET_KEY = "chave-padrao-insegura-nao-usar-em-producao"
+# Configurações globais - garantir consistência
+_SECRET_KEY = None
+_ALGORITHM = None
+_ACCESS_TOKEN_EXPIRE_MINUTES = None
+
+def get_config():
+    global _SECRET_KEY, _ALGORITHM, _ACCESS_TOKEN_EXPIRE_MINUTES
     
-ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
+    if _SECRET_KEY is None:
+        _SECRET_KEY = os.getenv("SECRET_KEY")
+        if not _SECRET_KEY:
+            print("WARNING: SECRET_KEY não está configurada! Usando chave padrão (INSEGURO)")
+            _SECRET_KEY = "chave-padrao-insegura-nao-usar-em-producao"
+        print(f"DEBUG AUTH - SECRET_KEY configurada: {_SECRET_KEY[:8]}...{_SECRET_KEY[-4:]}")
+    
+    if _ALGORITHM is None:
+        _ALGORITHM = os.getenv("ALGORITHM", "HS256")
+    
+    if _ACCESS_TOKEN_EXPIRE_MINUTES is None:
+        _ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
+    
+    return _SECRET_KEY, _ALGORITHM, _ACCESS_TOKEN_EXPIRE_MINUTES
+
+# Inicializar configurações
+SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES = get_config()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -31,12 +49,15 @@ def criar_token_acesso(data: dict, expira: Optional[timedelta] = None) -> str:
     expire = datetime.utcnow() + (expira or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     
+    # Garantir que usa as configurações atuais
+    secret_key, algorithm, _ = get_config()
+    
     print(f"DEBUG TOKEN - Criando token com dados: {data}")
-    print(f"DEBUG TOKEN - SECRET_KEY length: {len(SECRET_KEY)}")
-    print(f"DEBUG TOKEN - Algoritmo: {ALGORITHM}")
+    print(f"DEBUG TOKEN - SECRET_KEY length: {len(secret_key)}")
+    print(f"DEBUG TOKEN - Algoritmo: {algorithm}")
     print(f"DEBUG TOKEN - Expira em: {ACCESS_TOKEN_EXPIRE_MINUTES} minutos")
     
-    token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    token = jwt.encode(to_encode, secret_key, algorithm=algorithm)
     print(f"DEBUG TOKEN - Token criado com sucesso")
     return token
 
@@ -53,12 +74,15 @@ def obter_usuario_logado(token: str = Depends(oauth2_scheme), db: Session = Depe
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        # Debug: log das configurações (remover em produção)
-        print(f"DEBUG - SECRET_KEY existe: {bool(SECRET_KEY)}")
-        print(f"DEBUG - SECRET_KEY length: {len(SECRET_KEY) if SECRET_KEY else 0}")
-        print(f"DEBUG - ALGORITHM: {ALGORITHM}")
+        # Garantir que usa as configurações atuais
+        secret_key, algorithm, _ = get_config()
         
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        # Debug: log das configurações (remover em produção)
+        print(f"DEBUG - SECRET_KEY existe: {bool(secret_key)}")
+        print(f"DEBUG - SECRET_KEY length: {len(secret_key) if secret_key else 0}")
+        print(f"DEBUG - ALGORITHM: {algorithm}")
+        
+        payload = jwt.decode(token, secret_key, algorithms=[algorithm])
         nome_usuario: str = payload.get("sub")
         if nome_usuario is None:
             print("DEBUG - Nome de usuário não encontrado no token")

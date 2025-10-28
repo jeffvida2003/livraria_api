@@ -68,26 +68,35 @@ def test_token_creation():
 def test_login_flow():
     """Endpoint para testar fluxo completo de autenticação"""
     try:
+        # Mostrar configurações atuais
+        import auth as auth_module
+        current_secret = auth_module.SECRET_KEY
+        
         # Criar token de teste
         test_data = {"sub": "usuario_teste"}
         token = auth.criar_token_acesso(test_data)
         
-        # Tentar decodificar o token (simular verificação)
+        # Tentar decodificar o token usando a MESMA instância
         from jose import jwt
-        payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        payload = jwt.decode(token, current_secret, algorithms=[auth.ALGORITHM])
         
         return {
             "success": True,
             "token_created": True,
             "token_decoded": True,
             "payload": payload,
-            "user_from_token": payload.get("sub")
+            "user_from_token": payload.get("sub"),
+            "secret_key_first8": current_secret[:8] if current_secret else "None",
+            "secret_key_last4": current_secret[-4:] if current_secret else "None"
         }
     except Exception as e:
+        import auth as auth_module
         return {
             "success": False,
             "error": str(e),
-            "error_type": type(e).__name__
+            "error_type": type(e).__name__,
+            "secret_key_first8": auth_module.SECRET_KEY[:8] if auth_module.SECRET_KEY else "None",
+            "secret_key_last4": auth_module.SECRET_KEY[-4:] if auth_module.SECRET_KEY else "None"
         }
 
 @app.get("/debug/users-count")
