@@ -42,6 +42,7 @@ def debug_config():
         "secret_key_set": bool(os.getenv("SECRET_KEY")),
         "algorithm": os.getenv("ALGORITHM", ""),
         "token_expire": os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", ""),
+        "token_expire_int": auth.ACCESS_TOKEN_EXPIRE_MINUTES,
         "database_url_prefix": os.getenv("DATABASE_URL", "")[:20] + "..." if os.getenv("DATABASE_URL") else "Not set",
         "all_env_vars": list(os.environ.keys())[:10]  # Primeiras 10 variáveis para debug
     }
@@ -61,6 +62,32 @@ def test_token_creation():
         return {
             "success": False,
             "error": str(e)
+        }
+
+@app.post("/debug/test-login")
+def test_login_flow():
+    """Endpoint para testar fluxo completo de autenticação"""
+    try:
+        # Criar token de teste
+        test_data = {"sub": "usuario_teste"}
+        token = auth.criar_token_acesso(test_data)
+        
+        # Tentar decodificar o token (simular verificação)
+        from jose import jwt
+        payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        
+        return {
+            "success": True,
+            "token_created": True,
+            "token_decoded": True,
+            "payload": payload,
+            "user_from_token": payload.get("sub")
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
         }
 
 @app.post("/usuarios", response_model=schemas.UsuarioOut, status_code=201)
