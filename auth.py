@@ -11,7 +11,8 @@ from database import get_db
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
-    raise ValueError("SECRET_KEY não está configurada nas variáveis de ambiente")
+    print("WARNING: SECRET_KEY não está configurada! Usando chave padrão (INSEGURO)")
+    SECRET_KEY = "chave-padrao-insegura-nao-usar-em-producao"
     
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
@@ -29,7 +30,15 @@ def criar_token_acesso(data: dict, expira: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
     expire = datetime.utcnow() + (expira or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    
+    print(f"DEBUG TOKEN - Criando token com dados: {data}")
+    print(f"DEBUG TOKEN - SECRET_KEY length: {len(SECRET_KEY)}")
+    print(f"DEBUG TOKEN - Algoritmo: {ALGORITHM}")
+    print(f"DEBUG TOKEN - Expira em: {ACCESS_TOKEN_EXPIRE_MINUTES} minutos")
+    
+    token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    print(f"DEBUG TOKEN - Token criado com sucesso")
+    return token
 
 def autenticar_usuario(db: Session, nome: str, senha: str) -> Optional[Usuario]:
     usuario = db.query(Usuario).filter(Usuario.nome == nome).first()
